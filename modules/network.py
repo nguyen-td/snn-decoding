@@ -5,12 +5,10 @@ import torch.nn.functional as F
 
 # Define Network
 class SNN(nn.Module):
-    def __init__(self, n_inputs, n_hidden, n_outputs, beta, n_steps, n_pixels):
+    def __init__(self, n_inputs, beta, n_steps, n_pixels):
         super().__init__()
 
         self.n_inputs = n_inputs
-        self.n_hidden = n_hidden
-        self.n_outputs = n_outputs
         self.beta = beta
         self.n_steps = n_steps
         self.n_pixels = n_pixels
@@ -56,7 +54,7 @@ class SNN(nn.Module):
             spk3, mem3 = self.lif3(cur3, mem3)
 
             cur4 = self.fc1(self.flat(spk3.view(batch_size, 8, -1))) # decoding layer
-            spk4, mem4 = self.lif3(cur4, mem4)
+            spk4, mem4 = self.lif4(cur4, mem4)
 
             spk_rec.append(spk4)
             mem_rec.append(mem4)    
