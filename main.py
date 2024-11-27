@@ -1,5 +1,4 @@
 import snntorch as snn
-from snntorch import spikeplot as splt
 
 import torch
 import torch.nn as nn
