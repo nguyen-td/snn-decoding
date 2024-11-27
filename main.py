@@ -37,6 +37,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f'Device (CPU or GPU): ', device)
 
 # layer parameters
+images_all = mat['images'].squeeze()
+
 n_inputs = spike_train_cent.shape[0] # train on all channels
 n_pixels = images_all[0].shape[0] * images_all[0].shape[0]
 n_hidden = 256
