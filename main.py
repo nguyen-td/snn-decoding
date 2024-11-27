@@ -3,7 +3,6 @@ from snntorch import spikeplot as splt
 
 import torch
 import torch.nn as nn
-import matplotlib.pyplot as plt
 
 import scipy.io
 from pathlib import Path
