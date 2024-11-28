@@ -54,4 +54,4 @@ cd snn-decoding
 
 # Launch MPI code... 
 
-python main.pu
+python main.py
