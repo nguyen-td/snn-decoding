@@ -52,6 +52,13 @@ class Trainer:
         self.net_name = net_name
         self.device = device
 
+    def _init_weights(m):
+        if isinstance(m, nn.Linear):
+            torch.nn.init.xavier_normal_(m.weight)
+            m.bias.data.fill_(0.01)
+        if isinstance(m, nn.Conv2d):
+            torch.nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+
     def _choose_network(self):
         '''
         Choose which network to train and define or call it.
@@ -75,6 +82,7 @@ class Trainer:
                 ('lif3', snn.Leaky(beta=self.beta, init_hidden=True, output=True))
             ]))
             network = network.to(self.device)
+            network.apply(self._init_weights)
 
             # initialize STDPLearner for each layer
             self.stdp_lgn = STDPLearner(synapse=network.lgn, sn=network.lif1, tau_pre=self.tau_pre, tau_post=self.tau_post)
