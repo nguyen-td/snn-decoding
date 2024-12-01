@@ -47,7 +47,7 @@ n_hidden = 256
 beta = 0.9 
 tau_pre = 2
 tau_post = 2
-n_steps = 2000
+n_steps = 200
 n_epochs = 5000
 lr = 1e-2
 
