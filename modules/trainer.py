@@ -52,7 +52,7 @@ class Trainer:
         self.net_name = net_name
         self.device = device
 
-    def _init_weights(m):
+    def _init_weights(self, m):
         if isinstance(m, nn.Linear):
             torch.nn.init.xavier_normal_(m.weight)
             m.bias.data.fill_(0.01)
