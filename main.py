@@ -28,10 +28,10 @@ n_hidden = 256
 beta = 0.9 
 tau_pre = 2
 tau_post = 2
-# n_steps = 200
-# n_epochs = 5000
-n_steps = 1
-n_epochs = 2
+n_steps = 200
+n_epochs = 5000
+# n_steps = 1
+# n_epochs = 2
 lr = 1e-2
 
 model_save_dir = Path('model')
@@ -63,6 +63,7 @@ if not os.path.exists(Path('outputs')):
     os.makedirs(Path('outputs'))
 
 torch.save(loss_hist_train, Path('outputs') / 'loss_hist_train.pt')
+torch.save(loss, Path('outputs') / 'loss_val.pt')
 torch.save(decoded_image_val, Path('outputs') / 'decoded_image_val.pt')
 torch.save(spk_rec_val, Path('outputs') / 'spk_rec_val.pt')
 torch.save(mem_rec_val, Path('outputs') / 'mem_rec_val.pt')
