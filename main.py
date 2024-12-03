@@ -9,12 +9,12 @@ import os
 from modules import SNN, Trainer
 
 # load input spike data
-train_spikes = torch.load(Path('data') / 'train_spikes_gratings.pt')
-val_spikes = torch.load(Path('data') / 'val_spikes_gratings.pt')
+train_spikes = torch.load(Path('data') / 'train_spikes_gratings.pt', weights_only=True)
+val_spikes = torch.load(Path('data') / 'val_spikes_gratings.pt', weights_only=True)
 
 # load images
-train_images = torch.load(Path('data') / 'train_images_gratings.pt')
-val_images = torch.load(Path('data') / 'val_images_gratings.pt')
+train_images = torch.load(Path('data') / 'train_images_gratings.pt', weights_only=True)
+val_images = torch.load(Path('data') / 'val_images_gratings.pt', weights_only=True)
 
 # set device (CPU or GPU)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -28,10 +28,10 @@ n_hidden = 256
 beta = 0.9 
 tau_pre = 2
 tau_post = 2
-n_steps = 200
-n_epochs = 5000
-# n_steps = 1
-# n_epochs = 2
+# n_steps = 200
+# n_epochs = 5000
+n_steps = 1
+n_epochs = 2
 lr = 1e-2
 
 model_save_dir = Path('model')
