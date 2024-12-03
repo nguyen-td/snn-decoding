@@ -3,62 +3,44 @@ import snntorch as snn
 import torch
 import torch.nn as nn
 
-import scipy.io
 from pathlib import Path
 import os
 
 from modules import SNN, Trainer
 
 # load input spike data
-mat = scipy.io.loadmat(Path('data') / '01.mat') # animal 01
-spike_train_all = mat['resp_train'] # spike train of all neurons, neurons x image x trials x milliseconds
-print(spike_train_all.shape)
+train_spikes = torch.load(Path('data') / 'train_spikes_gratings.pt')
+val_spikes = torch.load(Path('data') / 'val_spikes_gratings.pt')
 
-# get indices of all small natural images
-idx_small_nat_images = torch.zeros(spike_train_all.shape[1])
-idx_small_nat_images[:539:2] = 1
-
-# get indices of all big natural images
-idx_big_nat_images = torch.ones(spike_train_all.shape[1])
-idx_big_nat_images[:539:2] = 0
-idx_big_nat_images[540:] = 0
-
-# get indices of all gratings
-idx_gratings = torch.zeros(spike_train_all.shape[1])
-idx_gratings[540:] = 1
-
-# only keep well-centered channels
-indcent = mat['INDCENT'].squeeze() # indicates if an stimulus was centered inside the neuron's RF and if the spikes were sorted
-spike_train_cent = torch.tensor(spike_train_all[indcent == 1]).float()
-spike_train_cent.shape
+# load images
+train_images = torch.load(Path('data') / 'train_images_gratings.pt')
+val_images = torch.load(Path('data') / 'val_images_gratings.pt')
 
 # set device (CPU or GPU)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f'Device (CPU or GPU): ', device)
 
-# layer parameters
-images_all = mat['images'].squeeze()
-
-n_inputs = spike_train_cent.shape[0] # train on all channels
-n_pixels = images_all[0].shape[0] * images_all[0].shape[0]
+n_inputs = train_spikes.shape[0] # train on all channels
+n_pixels = train_images[0].shape[0] * train_images[0].shape[0]
 n_hidden = 256
 
 # hyperparameters
 beta = 0.9 
 tau_pre = 2
 tau_post = 2
-n_steps = 2000
+n_steps = 200
 n_epochs = 5000
+# n_steps = 1
+# n_epochs = 2
 lr = 1e-2
 
+model_save_dir = Path('model')
+
 # set up spike, use spikes of a selected big image, concatenate the trials
-spk_in = spike_train_cent[:, 600, :, :].squeeze()
+spk_in = train_spikes.permute(1, 0, 2, 3)
 print(spk_in.shape)
 
-target = torch.tensor(images_all[600])
-
 # train network
-# TODO: Find better intialization scheme
 trainer = Trainer(n_inputs=n_inputs, 
                   n_hidden=n_hidden, 
                   n_pixels=n_pixels, 
@@ -68,14 +50,19 @@ trainer = Trainer(n_inputs=n_inputs,
                   device=device, 
                   tau_pre=tau_pre,
                   tau_post=tau_post, 
-                  lr=lr)
-loss_hist, decoded_image, spk_rec, mem_rec = trainer.train(spk_in, target)
+                  lr=lr,
+                  model_save_dir=model_save_dir)
+loss_hist_train, decoded_image, spk_rec, mem_rec, network = trainer.train(spk_in, train_images)
+
+# validate network
+spk_in = val_spikes.permute(1, 0, 2, 3)
+loss, decoded_image_val, spk_rec_val, mem_rec_val = trainer.eval(network, spk_in, val_images)
 
 # save outputs
 if not os.path.exists(Path('outputs')):
     os.makedirs(Path('outputs'))
 
-torch.save(loss_hist, Path('outputs') / 'loss_hist.pt')
-torch.save(decoded_image, Path('outputs') / 'decoded_image.pt')
-torch.save(spk_rec, Path('outputs') / 'spk_rec.pt')
-torch.save(mem_rec, Path('outputs') / 'mem_rec.pt')
+torch.save(loss_hist_train, Path('outputs') / 'loss_hist_train.pt')
+torch.save(decoded_image_val, Path('outputs') / 'decoded_image_val.pt')
+torch.save(spk_rec_val, Path('outputs') / 'spk_rec_val.pt')
+torch.save(mem_rec_val, Path('outputs') / 'mem_rec_val.pt')

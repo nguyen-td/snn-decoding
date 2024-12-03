@@ -7,6 +7,7 @@ import torch.nn as nn
 
 from collections import OrderedDict
 import warnings
+from pathlib import Path
 
 class Trainer:
     '''
@@ -28,6 +29,8 @@ class Trainer:
             Number of epochs
         device: String
             Either 'cpu' or 'cuda:0'
+        model_save_dir: String
+            Directory where the model should be saved at.
         net_name: String
             Name of the network to train, either 'SNN-CNN' or 'SNN'. Default is 'SNN-CNN'.
         tau_pre: Scalar
@@ -38,7 +41,7 @@ class Trainer:
             Learning rate for the Adam optimizer, default is 1e-4.
 
     '''
-    def __init__(self, n_inputs, n_hidden, n_pixels, beta, n_steps, n_epochs, device, net_name='SNN-CNN', tau_pre=2, tau_post=2, lr=1e-4):
+    def __init__(self, n_inputs, n_hidden, n_pixels, beta, n_steps, n_epochs, device, model_save_dir, net_name='SNN-CNN', tau_pre=2, tau_post=2, lr=1e-4):
         self.n_inputs = n_inputs
         self.n_hidden = n_hidden
         self.n_pixels = n_pixels
@@ -49,10 +52,11 @@ class Trainer:
         self.tau_post = tau_post
         self.lr = lr
         
+        self.model_save_dir = model_save_dir
         self.net_name = net_name
         self.device = device
 
-    def _init_weights(m):
+    def _init_weights(self, m):
         if isinstance(m, nn.Linear):
             torch.nn.init.xavier_normal_(m.weight)
             m.bias.data.fill_(0.01)
@@ -156,6 +160,8 @@ class Trainer:
                 Spiking output over steps of the last layer. Used to decode the image, where each neuron codes for one pixel using rate coding.
             mem_rec: (n_steps, n_batch, n_pixels) Torch tensor
                 Membrane potential over steps of the last layer.
+            network: torch.nn class
+                Neural network
         '''
 
         # initialize network
@@ -175,7 +181,8 @@ class Trainer:
             for epoch in range(self.n_epochs):
                 print(f'Epoch {epoch}')
                 optimizer.zero_grad()  
-                data = spk_in.unsqueeze(0).to(self.device)
+                data = spk_in.to(self.device)
+                # data = spk_in.unsqueeze(0).to(self.device)
 
                 # forward pass
                 network.train()
@@ -205,6 +212,52 @@ class Trainer:
             self.stdp_lgn.disable()
             self.stdp_v1.disable()
 
-        return loss_hist, decoded_image, spk_rec, mem_rec
+        # save trained model
+        torch.save(network.state_dict(), Path(self.model_save_dir) / 'snn_gratings.pt')
+
+        return loss_hist, decoded_image, spk_rec, mem_rec, network
+    
+    def eval(self, network, spk_in, target):
+        '''
+        Evaluate the selected network (do not compute gradients).
+
+        Inputs:
+        ------
+            network: torch.nn class
+                Neural network
+            spk_in: (n_channels, n_trials, n_time) Torch tensor
+                Spiking input of the corresponding image.
+            target: (n_pix, n_pix) Torch tensor
+                Target image, where n_pixels = n_pix x n_pix
+
+        Outputs:
+        --------
+            loss: Torch tensor
+                Validation loss
+            decoded_image: (n_pix, n_pix) Torch tensor
+                Decoeded image
+            spk_rec: (n_steps, n_batch, n_pixels) Torch tensor
+                Spiking output over steps of the last layer. Used to decode the image, where each neuron codes for one pixel using rate coding.
+            mem_rec: (n_steps, n_batch, n_pixels) Torch tensor
+                Membrane potential over steps of the last layer.
+        '''
+
+        if self.net_name == 'SNN-CNN':
+            mse_loss = torch.nn.MSELoss()
+
+            with torch.no_grad():
+                data = spk_in.to(self.device)
+
+                # forward pass
+                network.eval()
+                spk_rec, mem_rec = self._forward(network, data)
+
+                # decode image using rate code, i.e., each output neuron codes for a pixel
+                decoded_image = (spk_rec.sum(dim=0).reshape(target.shape) / self.n_steps)  # firing rates normalized
+
+                # compute loss
+                loss = mse_loss(decoded_image.float(), target.float()) 
+
+        return loss.item(), decoded_image, spk_rec, mem_rec
 
 
