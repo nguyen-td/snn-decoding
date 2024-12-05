@@ -75,25 +75,25 @@ class Trainer:
 
         if self.net_name == 'SNN-CNN':
             network = nn.Sequential(OrderedDict([
-                ('lgn', nn.Conv2d(in_channels=self.n_inputs, out_channels=16, kernel_size=3, stride=1, padding=1)),
-                ('lif1', snn.Leaky(beta=self.beta, init_hidden=True)),
-                ('v1_simple', nn.Conv2d(in_channels=16, out_channels=4, kernel_size=5, stride=1, padding=1)),
+                # ('lgn', nn.Conv2d(in_channels=self.n_inputs, out_channels=16, kernel_size=3, stride=1, padding=1)),
+                # ('lif1', snn.Leaky(beta=self.beta, init_hidden=True)),
+                ('v1_simple', nn.Conv2d(in_channels=self.n_inputs, out_channels=16, kernel_size=5, stride=1, padding=1)),
                 ('lif2', snn.Leaky(beta=self.beta, init_hidden=True)),
                 ('v1_complex', nn.MaxPool2d(kernel_size=2, stride=2)),
                 ('pool', nn.AdaptiveMaxPool2d(1)),
                 ('flat', nn.Flatten()),
-                ('fc1', nn.Linear(4, self.n_pixels)),
+                ('fc1', nn.Linear(16, self.n_pixels)),
                 ('lif3', snn.Leaky(beta=self.beta, init_hidden=True, output=True))
             ]))
             network = network.to(self.device)
             network.apply(self._init_weights)
 
             # initialize STDPLearner for each layer
-            self.stdp_lgn = STDPLearner(synapse=network.lgn, sn=network.lif1, tau_pre=self.tau_pre, tau_post=self.tau_post)
+            # self.stdp_lgn = STDPLearner(synapse=network.lgn, sn=network.lif1, tau_pre=self.tau_pre, tau_post=self.tau_post)
             self.stdp_v1 = STDPLearner(synapse=network.v1_simple, sn=network.lif2, tau_pre=self.tau_pre, tau_post=self.tau_pre)
 
             # enable STDP for all layers
-            self.stdp_lgn.enable()
+            # self.stdp_lgn.enable()
             self.stdp_v1.enable()
 
             # only store gradients for the last layer
@@ -189,12 +189,12 @@ class Trainer:
                 spk_rec, mem_rec = self._forward(network, data)
 
                 # apply STDP updates (on weights only, no gradients involved)
-                self.stdp_lgn.step(on_grad=True)
+                # self.stdp_lgn.step(on_grad=True)
                 self.stdp_v1.step(on_grad=True)
 
                 # clamp weights to prevent instability after STDP update
                 with torch.no_grad():
-                    network.lgn.weight.data.clamp_(-1.0, 1.0)
+                    # network.lgn.weight.data.clamp_(-1.0, 1.0)
                     network.v1_simple.weight.data.clamp_(-1.0, 1.0)
 
                 # decode image using rate code, i.e., each output neuron codes for a pixel
@@ -209,7 +209,7 @@ class Trainer:
                 optimizer.step()  
 
             # disable STDPLearner after training
-            self.stdp_lgn.disable()
+            # self.stdp_lgn.disable()
             self.stdp_v1.disable()
 
         # save trained model

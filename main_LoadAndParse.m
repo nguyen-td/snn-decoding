@@ -9,8 +9,13 @@ latency=50;
 tmp = resp_train;
 tmp(:,:,:,1:end-latency) = resp_train(:,:,:,latency+1:end);
 tmp(:,:,:,end-latency+1:end) = resp_train_blk(:,:,:,1:latency);
-resp_train = tmp; % neurons x image x trials x milliseconds
-plotSpikeRaster(logical(squeeze(resp_train(10, 2, :, :))), 'PlotType', 'vertline', 'AutoLabel', true);
+resp_train = tmp; % neurons x image x trials x millisecond
+
+LineFormat = struct();
+LineFormat.LineWidth = 1.5;
+plotSpikeRaster(logical(squeeze(resp_train(70, 2, :, :))), 'PlotType', 'vertline', 'AutoLabel', false, 'LineFormat', LineFormat);
+set(gca,'YTickLabel',[]);
+set(gca,'XTickLabel',[]);
 title('Spike times: neuron 60')
 
 %*** compute spike count per stimulus presentation
