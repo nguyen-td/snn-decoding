@@ -35,8 +35,8 @@
 #SBATCH -o snn-job.o%j       # Name of stdout output file
 #SBATCH -e snn-job.e%j       # Name of stderr error file
 #SBATCH -p spr               # Queue (partition) name
-#SBATCH -N 8                 # Total # of nodes 
-#SBATCH -n 448               # Total # of mpi tasks
+#SBATCH -N 64                # Total # of nodes 
+#SBATCH -p normal            # Queue (partition) name
 #SBATCH -t 48:00:00          # Run time (hh:mm:ss)
 #SBATCH --mail-user=nguyentd@tacc.utexas.edu
 #SBATCH --mail-type=all    # Send email at begin and end of job
