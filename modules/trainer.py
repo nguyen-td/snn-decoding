@@ -4,10 +4,12 @@ from snntorch import utils
 
 import torch
 import torch.nn as nn
+import numpy as np
 
 from collections import OrderedDict
 import warnings
 from pathlib import Path
+from more_itertools import chunked
 
 class Trainer:
     '''
@@ -39,9 +41,11 @@ class Trainer:
             Trace of the post-synaptic neuron (cf. https://spikingjelly.readthedocs.io/zh-cn/latest/activation_based_en/stdp.html#stdp-spike-timing-dependent-plasticity). Default is 2.
         lr: Scalar
             Learning rate for the Adam optimizer, default is 1e-4.
+        mini_batch_size: Scalar
+            Mini-batch size for training, default is 32.
 
     '''
-    def __init__(self, n_inputs, n_hidden, n_pixels, beta, n_steps, n_epochs, device, model_save_dir, net_name='SNN-CNN', tau_pre=2, tau_post=2, lr=1e-4):
+    def __init__(self, n_inputs, n_hidden, n_pixels, beta, n_steps, n_epochs, device, model_save_dir, net_name='SNN-CNN', tau_pre=2, tau_post=2, lr=1e-4, mini_batch_size=32):
         self.n_inputs = n_inputs
         self.n_hidden = n_hidden
         self.n_pixels = n_pixels
@@ -51,6 +55,7 @@ class Trainer:
         self.tau_pre = tau_pre
         self.tau_post = tau_post
         self.lr = lr
+        self.mini_batch_size = mini_batch_size
         
         self.model_save_dir = model_save_dir
         self.net_name = net_name
@@ -145,9 +150,9 @@ class Trainer:
 
         Inputs:
         ------
-            spk_in: (n_channels, n_trials, n_time) Torch tensor
+            spk_in: (n_batch, n_channels, n_trials, n_time) Torch tensor
                 Spiking input of the corresponding image.
-            target: (n_pix, n_pix) Torch tensor
+            target: (n_batch, n_pix, n_pix) Torch tensor
                 Target image, where n_pixels = n_pix x n_pix
 
         Outputs:
@@ -177,37 +182,54 @@ class Trainer:
             loss_hist = torch.zeros(self.n_epochs)
             utils.reset(network)  # resets hidden states for all LIF neurons in network
 
+            # make mini-batches
+            train_batch = list((chunked(spk_in, self.mini_batch_size)))
+            target_batch = list((chunked(target, self.mini_batch_size)))
+            n_batches = len(train_batch)
+
             # STDP on all layers but the last FC
             for epoch in range(self.n_epochs):
                 print(f'Epoch {epoch}')
-                optimizer.zero_grad()  
-                data = spk_in.to(self.device)
-                # data = spk_in.unsqueeze(0).to(self.device)
 
-                # forward pass
-                network.train()
-                spk_rec, mem_rec = self._forward(network, data)
+                train_loss = 0
+                for batch in range(n_batches):
+                    optimizer.zero_grad()  
+                    # data = spk_in.to(self.device)
+                    data = torch.as_tensor(np.array(train_batch[batch]), device=self.device)
+                    target = torch.as_tensor(np.array(target_batch[batch]), device=self.device)
+                    # data = spk_in.unsqueeze(0).to(self.device)
 
-                # apply STDP updates (on weights only, no gradients involved)
-                # self.stdp_lgn.step(on_grad=True)
-                self.stdp_v1.step(on_grad=True)
+                    # skip last batch if minibatch size does not match
+                    # TODO: change later and add proper oversampling
+                    if not data.shape[0] == self.mini_batch_size:
+                        continue
 
-                # clamp weights to prevent instability after STDP update
-                with torch.no_grad():
-                    # network.lgn.weight.data.clamp_(-1.0, 1.0)
-                    network.v1_simple.weight.data.clamp_(-1.0, 1.0)
+                    # forward pass
+                    network.train()
+                    spk_rec, mem_rec = self._forward(network, data)
 
-                # decode image using rate code, i.e., each output neuron codes for a pixel
-                decoded_image = (spk_rec.sum(dim=0).reshape(target.shape) / self.n_steps)  # firing rates normalized
+                    # apply STDP updates (on weights only, no gradients involved)
+                    # self.stdp_lgn.step(on_grad=True)
+                    self.stdp_v1.step(on_grad=True)
 
-                # compute loss
-                loss = mse_loss(decoded_image.float(), target.float()) 
-                loss_hist[epoch] = loss.item()
+                    # clamp weights to prevent instability after STDP update
+                    with torch.no_grad():
+                        # network.lgn.weight.data.clamp_(-1.0, 1.0)
+                        network.v1_simple.weight.data.clamp_(-1.0, 1.0)
 
-                # backpropagation for classification layer
-                loss.backward(retain_graph=True)  
-                optimizer.step()  
+                    # decode image using rate code, i.e., each output neuron codes for a pixel
+                    decoded_image = (spk_rec.sum(dim=0).reshape(target.shape) / self.n_steps)  # firing rates normalized
 
+                    # compute loss
+                    loss = mse_loss(decoded_image.float(), target.float()) 
+                    train_loss += loss.item()
+
+                    # backpropagation for classification layer
+                    loss.backward(retain_graph=True)  
+                    optimizer.step()  
+
+            loss_hist[epoch] = train_loss / n_batches
+            
             # disable STDPLearner after training
             # self.stdp_lgn.disable()
             self.stdp_v1.disable()
