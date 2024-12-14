@@ -37,7 +37,7 @@
 #SBATCH -p spr               # Queue (partition) name
 #SBATCH -N 4                # Total # of nodes 
 #SBATCH -p normal            # Queue (partition) name
-#SBATCH -t 24:00:00          # Run time (hh:mm:ss)
+#SBATCH -t 20:00:00          # Run time (hh:mm:ss)
 #SBATCH --mail-user=nguyentd@tacc.utexas.edu
 #SBATCH --mail-type=all    # Send email at begin and end of job
 
