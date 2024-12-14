@@ -34,8 +34,7 @@
 #SBATCH -J snn-job           # Job name
 #SBATCH -o snn-job.o%j       # Name of stdout output file
 #SBATCH -e snn-job.e%j       # Name of stderr error file
-#SBATCH -p spr               # Queue (partition) name
-#SBATCH -N 4                # Total # of nodes 
+#SBATCH -N 4                 # Total # of nodes 
 #SBATCH -p normal            # Queue (partition) name
 #SBATCH -t 20:00:00          # Run time (hh:mm:ss)
 #SBATCH --mail-user=nguyentd@tacc.utexas.edu
