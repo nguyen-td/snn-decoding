@@ -36,7 +36,7 @@
 #SBATCH -e snn-job.e%j       # Name of stderr error file
 #SBATCH -p spr               # Queue (partition) name
 #SBATCH -N 4                 # Total # of nodes 
-#SBATCH -t 8:00:00          # Run time (hh:mm:ss)
+#SBATCH -t 6:00:00          # Run time (hh:mm:ss)
 #SBATCH --mail-user=nguyentd@tacc.utexas.edu
 #SBATCH --mail-type=all    # Send email at begin and end of job
 
