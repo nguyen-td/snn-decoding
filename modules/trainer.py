@@ -228,7 +228,7 @@ class Trainer:
                     loss.backward(retain_graph=True)  
                     optimizer.step()  
 
-            loss_hist[epoch] = train_loss / n_batches
+                loss_hist[epoch] = train_loss / n_batches
             
             # disable STDPLearner after training
             # self.stdp_lgn.disable()
